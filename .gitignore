@@ -1,0 +1,89 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+.installed.cfg
+lib/
+lib64/
+.Python
+develop-eggs/
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Testing
+.tox/
+.pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+nosetests.xml
+pytest.ini
+
+# Type checking
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pytype/
+
+# Linting
+.ruff_cache/
+
+# Jupyter
+.ipynb_checkpoints
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Docker
+.docker/
+
+# Secrets — never commit these
+.env
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Alembic
+src/aumos_testing_harness/migrations/versions/*.pyc
+
+# Logs
+*.log
+logs/
+
+# Test artifacts (large binary outputs)
+test_artifacts/
+red_team_reports/

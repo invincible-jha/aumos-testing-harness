@@ -1,0 +1,55 @@
+# Git
+.git/
+.gitignore
+
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+.env
+.venv
+venv/
+env/
+
+# Testing artifacts
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+.tox/
+
+# Type checking cache
+.mypy_cache/
+.ruff_cache/
+
+# IDE
+.vscode/
+.idea/
+
+# Docker compose files (not needed in image)
+docker-compose*.yml
+
+# Docs and non-essential files
+README.md
+CONTRIBUTING.md
+SECURITY.md
+CHANGELOG.md
+CLAUDE.md
+.env.example
+Makefile
+
+# Test directories (not in production image)
+tests/
+
+# Logs and local artifacts
+*.log
+test_artifacts/
+red_team_reports/
