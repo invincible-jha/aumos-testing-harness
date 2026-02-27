@@ -334,6 +334,510 @@ class IRedTeamRunner(Protocol):
         ...
 
 
+@runtime_checkable
+class IAdversarialTester(Protocol):
+    """Interface for input perturbation robustness testing."""
+
+    async def run_text_perturbation(
+        self,
+        test_cases: list[dict],
+        perturbation_types: list[str],
+        threshold: float,
+    ) -> list[dict]:
+        """Test model robustness against text perturbations (typos, synonyms, paraphrase).
+
+        Args:
+            test_cases: List of dicts with 'input' and 'expected_output'.
+            perturbation_types: Subset of ['typo', 'synonym', 'paraphrase'].
+            threshold: Minimum robustness score to pass (0.0-1.0).
+
+        Returns:
+            List of result dicts with: perturbation_type, robustness_score,
+            attack_success_rate, passed, details.
+        """
+        ...
+
+    async def run_adversarial_examples(
+        self,
+        model_endpoint: str,
+        test_cases: list[dict],
+        epsilon: float,
+        threshold: float,
+    ) -> list[dict]:
+        """Generate FGSM-style adversarial examples and measure attack success rate.
+
+        Args:
+            model_endpoint: URL of the model inference endpoint.
+            test_cases: List of dicts with 'input' and 'expected_label'.
+            epsilon: Perturbation magnitude (0.0-1.0).
+            threshold: Minimum robustness score to pass.
+
+        Returns:
+            List of result dicts with attack_success_rate, robustness_score, passed.
+        """
+        ...
+
+    async def generate_vulnerability_report(
+        self,
+        all_results: list[dict],
+        model_name: str,
+    ) -> dict:
+        """Aggregate perturbation results into a vulnerability report.
+
+        Args:
+            all_results: All perturbation result dicts from all test types.
+            model_name: Human-readable model identifier.
+
+        Returns:
+            Vulnerability report dict with executive summary and per-vector details.
+        """
+        ...
+
+
+@runtime_checkable
+class IPrivacyTester(Protocol):
+    """Interface for privacy attack simulation (membership and attribute inference)."""
+
+    async def run_membership_inference_attack(
+        self,
+        model_endpoint: str,
+        member_records: list[dict],
+        non_member_records: list[dict],
+        membership_threshold: float,
+    ) -> dict:
+        """Execute membership inference attack via confidence thresholding.
+
+        Args:
+            model_endpoint: URL of the target model endpoint.
+            member_records: Records known to be in the training set.
+            non_member_records: Records known to be out of the training set.
+            membership_threshold: Confidence score above which records are members.
+
+        Returns:
+            Attack result dict with attack_accuracy, advantage, auc_roc,
+            per_record_scores, vulnerability_level.
+        """
+        ...
+
+    async def verify_differential_privacy(
+        self,
+        epsilon: float,
+        delta: float,
+        mechanism: str,
+        sensitivity: float,
+        noise_scale: float,
+    ) -> dict:
+        """Verify differential privacy guarantees for a noise mechanism.
+
+        Args:
+            epsilon: Privacy budget epsilon.
+            delta: Failure probability delta.
+            mechanism: Noise mechanism: 'gaussian', 'laplace', or 'exponential'.
+            sensitivity: Query sensitivity.
+            noise_scale: Noise scale parameter.
+
+        Returns:
+            DP verification result with guarantee_satisfied, privacy_level.
+        """
+        ...
+
+    async def generate_privacy_report(
+        self,
+        membership_result: dict | None,
+        attribute_results: list[dict],
+        dp_result: dict | None,
+        model_name: str,
+    ) -> dict:
+        """Aggregate privacy attack results into a comprehensive report.
+
+        Args:
+            membership_result: Membership inference result, or None.
+            attribute_results: Attribute inference results.
+            dp_result: DP verification result, or None.
+            model_name: Human-readable model identifier.
+
+        Returns:
+            Privacy report with overall_privacy_risk and per-attack breakdown.
+        """
+        ...
+
+
+@runtime_checkable
+class ICoverageAnalyzer(Protocol):
+    """Interface for code and input-space coverage analysis."""
+
+    async def collect_code_coverage(
+        self,
+        source_paths: list[str],
+        test_command: str,
+        working_directory: str,
+        include_branches: bool,
+    ) -> dict:
+        """Run tests with coverage instrumentation and collect coverage results.
+
+        Args:
+            source_paths: Source directory or file paths to instrument.
+            test_command: Shell command to execute the test suite.
+            working_directory: Directory to run the test command from.
+            include_branches: Whether to collect branch coverage data.
+
+        Returns:
+            Coverage result dict with line_coverage, branch_coverage,
+            per_file_coverage, files_analyzed.
+        """
+        ...
+
+    async def enforce_threshold(
+        self,
+        coverage_data: dict,
+        threshold: float,
+        fail_on_decrease: bool,
+        previous_coverage: float | None,
+    ) -> dict:
+        """Check whether coverage meets the configured threshold for CI/CD gating.
+
+        Args:
+            coverage_data: Coverage result from collect_code_coverage.
+            threshold: Minimum required coverage fraction.
+            fail_on_decrease: If True, also fail when coverage decreases.
+            previous_coverage: Previous run coverage for regression comparison.
+
+        Returns:
+            Gate result dict with passed, reasons, recommended_exit_code.
+        """
+        ...
+
+    async def generate_coverage_report(
+        self,
+        coverage_data: dict,
+        output_format: str,
+        output_path: str,
+    ) -> dict:
+        """Generate a coverage report in JSON or HTML format.
+
+        Args:
+            coverage_data: Coverage result dict to render.
+            output_format: 'json' or 'html'.
+            output_path: Destination file path.
+
+        Returns:
+            Report generation result with output_path, format, size_bytes.
+        """
+        ...
+
+
+@runtime_checkable
+class IPerformanceBenchmarker(Protocol):
+    """Interface for latency, throughput, and resource profiling."""
+
+    async def measure_latency(
+        self,
+        endpoint: str,
+        sample_payload: dict,
+        num_requests: int,
+        concurrency: int,
+        warmup_requests: int,
+    ) -> dict:
+        """Measure inference latency percentiles (P50, P90, P95, P99).
+
+        Args:
+            endpoint: Model inference endpoint URL.
+            sample_payload: Request payload for each probe.
+            num_requests: Total number of timed requests.
+            concurrency: Number of simultaneous inflight requests.
+            warmup_requests: Number of warmup requests before measurement.
+
+        Returns:
+            Latency result dict with p50_ms, p90_ms, p95_ms, p99_ms, error_rate.
+        """
+        ...
+
+    async def measure_throughput(
+        self,
+        endpoint: str,
+        sample_payload: dict,
+        duration_seconds: int,
+        concurrency: int,
+    ) -> dict:
+        """Measure sustained throughput (requests/sec) over a fixed duration.
+
+        Args:
+            endpoint: Model inference endpoint URL.
+            sample_payload: Request payload for each probe.
+            duration_seconds: Duration of the sustained load phase.
+            concurrency: Number of simultaneous inflight requests.
+
+        Returns:
+            Throughput result dict with requests_per_second, error_rate.
+        """
+        ...
+
+    async def compare_to_baseline(
+        self,
+        current_metrics: dict,
+        baseline_metrics: dict,
+        tolerance_percent: float,
+    ) -> dict:
+        """Compare current benchmark metrics against a stored baseline.
+
+        Args:
+            current_metrics: Current run metrics dict.
+            baseline_metrics: Previous release baseline metrics dict.
+            tolerance_percent: Allowed degradation percentage before regression.
+
+        Returns:
+            Comparison result with regressions, improvements, overall_status.
+        """
+        ...
+
+
+@runtime_checkable
+class IRegressionDetector(Protocol):
+    """Interface for CI/CD quality gate regression detection."""
+
+    async def compare_to_baseline(
+        self,
+        current_metrics: dict,
+        baseline_metrics: dict,
+        metric_configs: dict | None,
+    ) -> dict:
+        """Compare current evaluation metrics against a stored baseline.
+
+        Args:
+            current_metrics: Dict mapping metric_name -> current value.
+            baseline_metrics: Dict mapping metric_name -> baseline value.
+            metric_configs: Optional per-metric tolerance and direction config.
+
+        Returns:
+            Comparison result with regressions, improvements, overall_status.
+        """
+        ...
+
+    async def evaluate_quality_gate(
+        self,
+        comparison_result: dict,
+        statistical_result: dict | None,
+        strict_mode: bool,
+    ) -> dict:
+        """Evaluate regression findings and produce a CI/CD gate decision.
+
+        Args:
+            comparison_result: Output from compare_to_baseline.
+            statistical_result: Optional statistical significance test result.
+            strict_mode: If True, apply stricter regression criteria.
+
+        Returns:
+            Gate decision dict with passed, exit_code, reasons, severity.
+        """
+        ...
+
+    async def update_baseline(
+        self,
+        new_metrics: dict,
+        baseline_file_path: str,
+        approved_by: str,
+        model_version: str,
+    ) -> dict:
+        """Update the stored baseline after an approved release.
+
+        Args:
+            new_metrics: New baseline metric values.
+            baseline_file_path: Path to the baseline JSON file.
+            approved_by: Approver identifier for audit trail.
+            model_version: Model version being promoted to baseline.
+
+        Returns:
+            Baseline update result with file_path, updated_at, metric_count.
+        """
+        ...
+
+
+@runtime_checkable
+class ITestReportGenerator(Protocol):
+    """Interface for automated multi-format test report generation."""
+
+    async def aggregate_results(
+        self,
+        run_id: str,
+        llm_results: list[dict] | None,
+        rag_results: list[dict] | None,
+        agent_results: list[dict] | None,
+        red_team_results: list[dict] | None,
+        adversarial_results: list[dict] | None,
+        privacy_results: list[dict] | None,
+        coverage_result: dict | None,
+        performance_result: dict | None,
+        regression_result: dict | None,
+    ) -> dict:
+        """Aggregate all test type results into a unified report payload.
+
+        Args:
+            run_id: Test run UUID for correlation.
+            llm_results: LLM evaluation metric results.
+            rag_results: RAG evaluation metric results.
+            agent_results: Agent evaluation metric results.
+            red_team_results: Red-team probe results.
+            adversarial_results: Adversarial robustness results.
+            privacy_results: Privacy attack results.
+            coverage_result: Code coverage result.
+            performance_result: Performance benchmark result.
+            regression_result: Regression gate result.
+
+        Returns:
+            Aggregated report payload with executive summary and per-type details.
+        """
+        ...
+
+    async def generate_report(
+        self,
+        aggregated_report: dict,
+        output_format: str,
+        output_path: str,
+    ) -> dict:
+        """Render and write a report file in the specified format.
+
+        Args:
+            aggregated_report: Full aggregated report payload.
+            output_format: 'json' or 'pdf'.
+            output_path: Destination file path.
+
+        Returns:
+            Report generation result with output_path, format, size_bytes.
+        """
+        ...
+
+    async def generate_badge(
+        self,
+        aggregated_report: dict,
+        badge_type: str,
+    ) -> dict:
+        """Generate a Shields.io badge URL for the test run result.
+
+        Args:
+            aggregated_report: Aggregated report payload.
+            badge_type: Badge type: 'status', 'score', or 'coverage'.
+
+        Returns:
+            Badge dict with url, label, message, color, markdown.
+        """
+        ...
+
+    async def distribute_via_webhook(
+        self,
+        aggregated_report: dict,
+        webhook_url: str,
+        headers: dict | None,
+    ) -> dict:
+        """POST the aggregated report to a webhook endpoint.
+
+        Args:
+            aggregated_report: Report payload to deliver.
+            webhook_url: Destination webhook URL.
+            headers: Optional additional HTTP headers.
+
+        Returns:
+            Delivery result with status_code, success, response_ms.
+        """
+        ...
+
+
+@runtime_checkable
+class ISyntheticDataTester(Protocol):
+    """Interface for synthetic data fidelity and privacy validation."""
+
+    async def compare_statistical_similarity(
+        self,
+        real_data: list[dict],
+        synthetic_data: list[dict],
+        numeric_columns: list[str],
+        categorical_columns: list[str],
+        threshold: float,
+    ) -> dict:
+        """Compute statistical similarity between real and synthetic datasets.
+
+        Args:
+            real_data: Reference real dataset as list of record dicts.
+            synthetic_data: Synthetic dataset to evaluate.
+            numeric_columns: Column names to treat as numeric.
+            categorical_columns: Column names to treat as categorical.
+            threshold: Minimum mean similarity score to pass.
+
+        Returns:
+            Statistical similarity result with mean_similarity, per_column_results, passed.
+        """
+        ...
+
+    async def run_ml_utility_test(
+        self,
+        real_data: list[dict],
+        synthetic_data: list[dict],
+        feature_columns: list[str],
+        target_column: str,
+        model_type: str,
+    ) -> dict:
+        """Run the Train-on-Synthetic, Test-on-Real (TSTR) utility benchmark.
+
+        Args:
+            real_data: Real reference dataset.
+            synthetic_data: Synthetic training dataset.
+            feature_columns: Feature column names.
+            target_column: Target classification column name.
+            model_type: Classifier type: 'random_forest', 'logistic', or 'gradient_boosting'.
+
+        Returns:
+            ML utility result with tstr_accuracy, trtr_accuracy, utility_ratio, passed.
+        """
+        ...
+
+    async def compute_fidelity_score(
+        self,
+        statistical_result: dict,
+        ml_utility_result: dict,
+        privacy_result: dict,
+        column_dist_result: dict,
+        threshold: float,
+    ) -> dict:
+        """Compute a weighted composite fidelity score from all quality dimensions.
+
+        Args:
+            statistical_result: Statistical similarity result.
+            ml_utility_result: ML utility benchmark result.
+            privacy_result: Privacy risk assessment result.
+            column_dist_result: Column distribution comparison result.
+            threshold: Minimum composite score to pass.
+
+        Returns:
+            Fidelity score dict with composite_score, per_dimension_scores, passed.
+        """
+        ...
+
+    async def generate_validation_report(
+        self,
+        dataset_name: str,
+        statistical_result: dict,
+        ml_utility_result: dict,
+        privacy_result: dict,
+        column_dist_result: dict,
+        fidelity_score_result: dict,
+        fidelity_validator_result: dict | None,
+    ) -> dict:
+        """Assemble the full synthetic data validation report.
+
+        Args:
+            dataset_name: Human-readable dataset identifier.
+            statistical_result: Statistical similarity result.
+            ml_utility_result: TSTR benchmark result.
+            privacy_result: Privacy risk result.
+            column_dist_result: Per-column distribution comparison.
+            fidelity_score_result: Composite fidelity score result.
+            fidelity_validator_result: External fidelity validator result, or None.
+
+        Returns:
+            Validation report dict with executive summary and per-dimension details.
+        """
+        ...
+
+
 __all__ = [
     "ITestSuiteRepository",
     "ITestRunRepository",
@@ -343,4 +847,11 @@ __all__ = [
     "IRAGEvaluator",
     "IAgentEvaluator",
     "IRedTeamRunner",
+    "IAdversarialTester",
+    "IPrivacyTester",
+    "ICoverageAnalyzer",
+    "IPerformanceBenchmarker",
+    "IRegressionDetector",
+    "ITestReportGenerator",
+    "ISyntheticDataTester",
 ]
